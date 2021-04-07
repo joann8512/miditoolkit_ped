@@ -1,4 +1,4 @@
-# miditoolkit
+# miditoolkit_ped
 
 A python package for working with MIDI data. 
 
@@ -29,6 +29,15 @@ The usage is similar to [pretty_midi](https://github.com/craffel/pretty-midi), w
     
 * External Library
    * [structure analysis](https://github.com/wayne391/sf_segmenter)
+   
+## Objects Within Instruments
+* Instrument name
+* is_drum
+* Notes  
+* Velocity  
+* PitchBend  
+* Control Changes
+* Pedal
 
 ## Installation
 * current version: 0.1.14
