@@ -299,7 +299,8 @@ class MidiFile(object):
                         # Add the control change event
                         instrument.pedals.append(pedal)
                         ped_list = []
-                    elif not ped_list and event.control == 64 and event.value == 127:
+                    #elif not ped_list and event.control == 64 and event.value == 127:
+                    elif not ped_list and event.control == 64 and event.value != 0:
                         ped_list.append(event)  # Now only have on
                     
         # Initialize list of instruments from instrument_map
@@ -360,6 +361,7 @@ class MidiFile(object):
                     event2.type in secondary_sort):
                 return (secondary_sort[event1.type](event1) -
                         secondary_sort[event2.type](event2))
+
             return event1.time - event2.time
 
         if (filename is None) and (file is None):
@@ -520,7 +522,7 @@ class MidiFile(object):
             cc_list = []
             if instrument.control_changes:
                 for control_change in instrument.control_changes:
-                    cc_list.append(mido.Message(
+                    track.append(mido.Message(
                         'control_change',
                         time=control_change.time,
                         channel=channel, control=control_change.number,
@@ -533,17 +535,19 @@ class MidiFile(object):
                         time=pedals.start,
                         channel=channel, control=64,
                         value=127))
+                    
                     # append for pedal-off (0)
                     cc_list.append(mido.Message(
                         'control_change',
                         time=pedals.end,
                         channel=channel, control=64,
                         value=0))
+                    #print(cc_list[-2:])
+
 
             if segment:
                 bend_list = _include_meta_events_within_range(bend_list, start_tick, end_tick, shift=shift, front=True)
-                cc_list = _include_meta_events_within_range(cc_list, start_tick, end_tick, shift=shift, front=True)
-            track += (bend_list + cc_list)
+            track += (bend_list + cc_list)  # 
 
             # Add all note events
             for note in instrument.notes:
@@ -558,7 +562,38 @@ class MidiFile(object):
                         'note_on', time=note.end,
                         channel=channel, note=note.pitch, velocity=0))
             track = sorted(track, key=functools.cmp_to_key(event_compare))
-
+            
+            memo = 0
+            i = 0
+            while i < len(track):
+                #print(i)
+                #print(len(track))
+                if track[i].type == 'control_change':
+                    tmp = track[i].value
+                    if tmp == memo:
+                        track.pop(i)
+                    else:
+                        memo = track[i].value
+                        i += 1
+                else:
+                    i += 1
+                
+            
+            #i = 0
+            #while i <= len(cc_list)-1:
+            #    assert cc_list[i].value == 127
+            #    if cc_list[i].time < track[0].time:
+            #        track.insert(0, cc_list[i])
+            #        track.insert(0, cc_list[i+1])
+            #        i = i+2
+            #    else:
+            #        for j in range(len(track)-1):
+            #            if track[j].time <= cc_list[i].time < track[j+1].time:
+            #                track.insert(j+1, cc_list[i])
+            #                track.insert(j+2, cc_list[i+1])
+            #                i = i+2
+            #                break
+                    
             # If there's a note off event and a note on event with the same
             # tick and pitch, put the note off event first
             for n, (event1, event2) in enumerate(zip(track[:-1], track[1:])):
@@ -586,6 +621,7 @@ class MidiFile(object):
 
         # Write it out
         if filename:
+            print(filename)
             midi_parsed.save(filename=filename)
         else:
             midi_parsed.save(file=file)
